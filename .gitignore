@@ -1,0 +1,82 @@
+# ─── Node ────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# ─── Expo ────────────────────────────────────────────────────────────────────
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.expo-shared/
+
+# ─── Metro bundler ───────────────────────────────────────────────────────────
+.metro-health-check*
+.cache/
+
+# ─── Native generated (recreated via `npx expo prebuild`) ────────────────────
+/ios/
+/android/
+.kotlin/
+
+# ─── CocoaPods ───────────────────────────────────────────────────────────────
+/ios/Pods/
+/ios/Podfile.lock
+
+# ─── Xcode ───────────────────────────────────────────────────────────────────
+*.xcuserstate
+DerivedData/
+build/
+*.orig.*
+
+# ─── Android ─────────────────────────────────────────────────────────────────
+*.apk
+*.aab
+*.keystore
+*.jks
+local.properties
+.gradle/
+
+# ─── Signing / certificates (never commit these) ─────────────────────────────
+*.p8
+*.p12
+*.p7b
+*.cer
+*.mobileprovision
+*.certSigningRequest
+AuthKey_*.p8
+GoogleService-Info.plist
+google-services.json
+
+# ─── API keys & secrets ───────────────────────────────────────────────────────
+# config.ts contains live API keys — use config.example.ts as the committed template
+src/constants/config.ts
+*.env
+.env
+.env.*
+!.env.example
+secrets.json
+credentials.json
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
+*.tsbuildinfo
+*.js.map
+
+# ─── macOS ───────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+*.pem
+
+# ─── IDEs ────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ─── Test / coverage ─────────────────────────────────────────────────────────
+coverage/
+.jest-cache/

@@ -21,7 +21,7 @@
         "NSPhotoLibraryUsageDescription": "Card Valuer needs photo library access to save and share card scan exports.",
         "NSPhotoLibraryAddUsageDescription": "Card Valuer needs permission to save exported files to your photo library."
       },
-      "bundleIdentifier": "com.anonymous.card-valuer"
+      "bundleIdentifier": "com.tomlafferty.cardvaluer"
     },
     "android": {
       "adaptiveIcon": {

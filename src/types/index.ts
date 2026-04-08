@@ -1,42 +1,36 @@
 export type CardCondition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 
-// Scrydex API uses 'DM' for damaged — map to/from our UI 'DMG'
-export type ScrydexCondition = 'NM' | 'LP' | 'MP' | 'HP' | 'DM';
+// PokeTrace condition keys used in API responses
+export type PokeTraceConditionKey =
+  | 'NEAR_MINT'
+  | 'LIGHTLY_PLAYED'
+  | 'MODERATELY_PLAYED'
+  | 'HEAVILY_PLAYED'
+  | 'DAMAGED';
 
-export interface PriceTrends {
-  '1d'?: number;
-  '7d'?: number;
-  '14d'?: number;
-  '30d'?: number;
-  '90d'?: number;
-  '180d'?: number;
-}
-
-export interface ScrydexRawPrice {
+export interface PokeTracePrice {
+  avg: number;
   low: number;
-  market: number;
-  currency: string;
-  trends?: PriceTrends;
-}
-
-export type ScrydexRawPrices = Partial<Record<ScrydexCondition, ScrydexRawPrice>>;
-
-export interface ScrydexGradedPrice {
-  low: number;
-  mid: number;
   high: number;
-  market: number;
-  currency: string;
-  grade: string;
-  company: string;
-  is_perfect?: boolean;
-  is_signed?: boolean;
-  is_error?: boolean;
+  saleCount?: number;
 }
 
-export interface ScrydexPrices {
-  raw?: ScrydexRawPrices;
-  graded?: Record<string, Record<string, ScrydexGradedPrice>>;
+// prices.ebay / prices.tcgplayer / prices.cardmarket
+// Keys are either condition keys (NEAR_MINT) or grade keys (PSA_10, CGC_9)
+export interface PokeTracePrices {
+  ebay?: Record<string, PokeTracePrice>;
+  tcgplayer?: Record<string, PokeTracePrice>;
+  cardmarket?: Record<string, PokeTracePrice>;
+}
+
+// Normalised graded price extracted from PokeTrace (e.g. PSA_10 entry)
+export interface PokeTraceGradedPrice {
+  avg: number;
+  low: number;
+  high: number;
+  saleCount?: number;
+  grader: string; // PSA, CGC, BGS, SGC, etc.
+  grade: string;  // 10, 9.5, 9, etc.
 }
 
 export interface PokemonCard {
@@ -46,15 +40,15 @@ export interface PokemonCard {
   set: {
     id: string;
     name: string;
-    series: string;
-    printedTotal: number;
-    total: number;
-    releaseDate: string;
-    images: { symbol: string; logo: string };
+    series?: string;
+    printedTotal?: number;
+    total?: number;
+    releaseDate?: string;
+    images?: { symbol?: string; logo?: string };
   };
   rarity?: string;
-  images: { small: string; large: string };
-  prices?: ScrydexPrices;
+  images?: { small?: string; large?: string };
+  prices?: PokeTracePrices;
 }
 
 export interface ScannedCard {
@@ -94,7 +88,7 @@ export interface ScannedSlab {
   cardName: string | null;
   grade: string | null;
   card: PokemonCard | null;
-  gradedPrice: ScrydexGradedPrice | null;
+  gradedPrice: PokeTraceGradedPrice | null;
 }
 
 // eBay types

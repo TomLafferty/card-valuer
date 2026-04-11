@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useScannerContext } from '../context/ScannerContext';
+import PixelBorder from '../components/PixelBorder';
 import CardListItem from '../components/CardListItem';
 import { exportSessionToCSV } from '../utils/csvExport';
 import { ScannedCard, EbayComps } from '../types';
@@ -182,6 +183,7 @@ const SessionScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={cards.length > 0 ? <PixelBorder colorOffset={2} /> : null}
         contentContainerStyle={cards.length === 0 ? styles.emptyListContent : styles.listContent}
         showsVerticalScrollIndicator={false}
       />

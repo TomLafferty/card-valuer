@@ -29,12 +29,18 @@ const CardListItem: React.FC<CardListItemProps> = ({
   return (
     <View style={styles.container}>
       {/* Thumbnail */}
-      <Image
-        source={{ uri: card.images.small }}
-        style={styles.thumbnail}
-        contentFit="contain"
-        accessibilityLabel={`${card.name} card image`}
-      />
+      {card.images?.small ? (
+        <Image
+          source={{ uri: card.images.small }}
+          style={styles.thumbnail}
+          contentFit="contain"
+          accessibilityLabel={`${card.name} card image`}
+        />
+      ) : (
+        <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
+          <Text style={styles.thumbnailPlaceholderText}>TCG</Text>
+        </View>
+      )}
 
       {/* Middle: name, set info, condition picker */}
       <View style={styles.middleContainer}>
@@ -105,6 +111,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#2a2a2a',
     flexShrink: 0,
+  },
+  thumbnailPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailPlaceholderText: {
+    color: '#555',
+    fontSize: 10,
+    fontWeight: '700',
   },
   middleContainer: {
     flex: 1,

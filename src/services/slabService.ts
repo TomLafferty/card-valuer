@@ -1,8 +1,8 @@
-import { SlabGrader, ScannedSlab, ScrydexGradedPrice } from '../types';
-import { POKEMON_TCG_API_BASE, POKEMON_TCG_API_KEY, SCRYDEX_TEAM_ID } from '../constants/config';
+import { SlabGrader, ScannedSlab, PokeTraceGradedPrice } from '../types';
+import { POKETRACE_API_BASE, POKETRACE_API_KEY } from '../constants/config';
 
 function generateId(): string {
-  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+  return Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
 }
 
 /**
@@ -13,54 +13,40 @@ function generateId(): string {
  * BGS:  similar to PSA but often prefixed, Beckett uses numeric IDs
  * SGC:  numeric, sometimes shorter
  * TAG:  numeric
- *
- * Returns null if the value cannot be interpreted as any known format.
  */
 export function parseCertBarcode(
   barcodeValue: string
 ): { grader: SlabGrader; certNumber: string } | null {
-  if (!barcodeValue || barcodeValue.trim().length === 0) {
-    return null;
-  }
+  if (!barcodeValue || barcodeValue.trim().length === 0) return null;
 
   const trimmed = barcodeValue.trim();
 
-  // CGC barcodes often contain dashes in the format XXXXXXXXXX-X or similar
   if (/^\d{4,}-\d/.test(trimmed) || /\d-\d{4,}-\d/.test(trimmed)) {
-    // Strip non-digit characters to get canonical cert number
     const certNumber = trimmed.replace(/[^0-9]/g, '');
     return { grader: 'CGC', certNumber };
   }
 
-  // TAG uses "TAG" prefix or 9-digit numeric
   if (/^TAG\d+/i.test(trimmed)) {
     const certNumber = trimmed.replace(/^TAG/i, '').replace(/\D/g, '');
     return { grader: 'TAG', certNumber };
   }
 
-  // BGS uses "BGS" prefix
   if (/^BGS\d+/i.test(trimmed)) {
     const certNumber = trimmed.replace(/^BGS/i, '').replace(/\D/g, '');
     return { grader: 'BGS', certNumber };
   }
 
-  // SGC uses "SGC" prefix
   if (/^SGC\d+/i.test(trimmed)) {
     const certNumber = trimmed.replace(/^SGC/i, '').replace(/\D/g, '');
     return { grader: 'SGC', certNumber };
   }
 
-  // PSA barcodes: pure digits, typically 8 digits
   if (/^\d{6,12}$/.test(trimmed)) {
     return { grader: 'PSA', certNumber: trimmed };
   }
 
-  // Mixed alphanumeric — unknown format, return null
-  if (/[a-zA-Z]/.test(trimmed)) {
-    return null;
-  }
+  if (/[a-zA-Z]/.test(trimmed)) return null;
 
-  // Last resort: treat any digit sequence as PSA
   if (/^\d+$/.test(trimmed)) {
     return { grader: 'PSA', certNumber: trimmed };
   }
@@ -69,91 +55,75 @@ export function parseCertBarcode(
 }
 
 /**
- * Attempts to find graded price data from Scrydex for a given grader/cert combo.
- * PSA has no free public cert lookup API, so this tries a best-effort search
- * against the Scrydex API and falls back gracefully.
+ * Looks up graded price data from PokeTrace for a given cert/grader.
+ * PokeTrace stores graded prices inline in card price data with keys like "PSA_10".
+ * This does a best-effort name search and extracts the matching grader's top grade price.
  */
-async function fetchGradedPriceFromScrydex(
+async function fetchGradedPrice(
   certNumber: string,
   grader: SlabGrader
-): Promise<{ cardName: string | null; grade: string | null; gradedPrice: ScrydexGradedPrice | null }> {
+): Promise<{ cardName: string | null; grade: string | null; gradedPrice: PokeTraceGradedPrice | null }> {
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (POKEMON_TCG_API_KEY) {
-      headers['X-Api-Key'] = POKEMON_TCG_API_KEY;
-    }
-    if (SCRYDEX_TEAM_ID) {
-      headers['X-Team-ID'] = SCRYDEX_TEAM_ID;
-    }
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (POKETRACE_API_KEY) headers['X-API-Key'] = POKETRACE_API_KEY;
 
-    // Scrydex/Pokemon TCG API doesn't have a cert-number lookup endpoint for MVP.
-    // We attempt a search using the cert number as a query — this is unlikely to
-    // return useful results but keeps the door open if the API adds cert support.
-    const url = `${POKEMON_TCG_API_BASE}/cards?q=cert:${encodeURIComponent(certNumber)}&pageSize=1`;
-    const response = await fetch(url, { headers });
+    // PokeTrace has no cert-number lookup — search by cert as a keyword (best effort)
+    const params = new URLSearchParams({ search: certNumber, market: 'US', limit: '1' });
+    const response = await fetch(`${POKETRACE_API_BASE}/cards?${params}`, { headers });
 
-    if (!response.ok) {
-      return { cardName: null, grade: null, gradedPrice: null };
-    }
+    if (!response.ok) return { cardName: null, grade: null, gradedPrice: null };
 
     const data = await response.json();
-    const cards = data.data ?? [];
+    const card = data.data?.[0];
+    if (!card) return { cardName: null, grade: null, gradedPrice: null };
 
-    if (cards.length === 0) {
-      return { cardName: null, grade: null, gradedPrice: null };
-    }
+    const ebayPrices = card.prices?.ebay ?? {};
+    const graderPrefix = grader.toUpperCase() + '_';
 
-    const card = cards[0];
-    const graderKey = grader.toLowerCase();
-    const gradedPrices = card.prices?.graded?.[graderKey] ?? {};
-    const gradeKeys = Object.keys(gradedPrices);
+    // Find all keys for this grader (e.g. PSA_10, PSA_9)
+    const gradeEntries = Object.entries(ebayPrices)
+      .filter(([key]) => key.startsWith(graderPrefix))
+      .map(([key, price]) => ({
+        grade: key.slice(graderPrefix.length),
+        price: price as { avg: number; low: number; high: number; saleCount?: number },
+      }))
+      .sort((a, b) => parseFloat(b.grade) - parseFloat(a.grade));
 
-    if (gradeKeys.length === 0) {
+    if (gradeEntries.length === 0) {
       return { cardName: card.name ?? null, grade: null, gradedPrice: null };
     }
 
-    // Pick the highest available grade
-    gradeKeys.sort((a, b) => parseFloat(b) - parseFloat(a));
-    const topGradeKey = gradeKeys[0];
-    const gradedPrice: ScrydexGradedPrice = gradedPrices[topGradeKey];
-
-    return {
-      cardName: card.name ?? null,
-      grade: topGradeKey,
-      gradedPrice,
+    const top = gradeEntries[0];
+    const gradedPrice: PokeTraceGradedPrice = {
+      avg: top.price.avg,
+      low: top.price.low,
+      high: top.price.high,
+      saleCount: top.price.saleCount,
+      grader: grader,
+      grade: top.grade,
     };
+
+    return { cardName: card.name ?? null, grade: top.grade, gradedPrice };
   } catch (err) {
-    console.warn('Scrydex graded lookup failed:', err);
+    console.warn('PokeTrace graded lookup failed:', err);
     return { cardName: null, grade: null, gradedPrice: null };
   }
 }
 
-/**
- * Looks up a slab by cert number and grader. Always returns a ScannedSlab —
- * partial data is returned when lookups fail rather than throwing.
- */
 export async function lookupSlabCard(
   certNumber: string,
   grader: SlabGrader
 ): Promise<ScannedSlab> {
-  const id = generateId();
-  const scanTimestamp = Date.now();
-
-  const { cardName, grade, gradedPrice } = await fetchGradedPriceFromScrydex(
-    certNumber,
-    grader
-  );
+  const { cardName, grade, gradedPrice } = await fetchGradedPrice(certNumber, grader);
 
   return {
-    id,
-    scanTimestamp,
+    id: generateId(),
+    scanTimestamp: Date.now(),
     certNumber,
     grader,
     cardName,
     grade,
-    card: null, // Full PokemonCard lookup not supported in MVP cert flow
+    card: null,
     gradedPrice,
   };
 }

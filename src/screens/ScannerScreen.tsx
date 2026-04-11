@@ -24,6 +24,7 @@ import CardListItem from '../components/CardListItem';
 import SlabListItem from '../components/SlabListItem';
 import { parseCertBarcode, lookupSlabCard } from '../services/slabService';
 import { ScannedCard, ScannedSlab } from '../types';
+import PixelBorder from '../components/PixelBorder';
 
 interface ScannerScreenProps {
   navigation: {
@@ -227,6 +228,11 @@ const ScannerScreen: React.FC<ScannerScreenProps> = ({ navigation }) => {
         </Pressable>
       </View>
 
+      {/* Pixel border — sits on top edge of bottom panel */}
+      <View style={styles.pixelBorderRow}>
+        <PixelBorder />
+      </View>
+
       {/* Slide-up bottom panel */}
       <View style={styles.bottomPanel}>
         <View style={styles.bottomPanelHeader}>
@@ -387,6 +393,13 @@ const styles = StyleSheet.create({
   modeChipActive: { backgroundColor: '#E53935', borderColor: '#E53935' },
   modeChipText: { color: '#888', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   modeChipTextActive: { color: '#ffffff' },
+  pixelBorderRow: {
+    position: 'absolute',
+    bottom: 280,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   bottomPanel: {
     position: 'absolute',
     bottom: 0,

@@ -1,36 +1,42 @@
-import { PokemonCard, CardCondition, ScrydexCondition, ScrydexRawPrices } from '../types';
+import { PokemonCard, CardCondition, PokeTracePrice } from '../types';
 import { CONDITION_MULTIPLIERS } from '../constants/config';
 
-// Map our UI condition names to Scrydex API condition keys
-const CONDITION_TO_SCRYDEX: Record<CardCondition, ScrydexCondition> = {
-  NM: 'NM',
-  LP: 'LP',
-  MP: 'MP',
-  HP: 'HP',
-  DMG: 'DM',
+// Map our UI condition names to PokeTrace API condition keys
+const CONDITION_TO_POKETRACE: Record<CardCondition, string> = {
+  NM: 'NEAR_MINT',
+  LP: 'LIGHTLY_PLAYED',
+  MP: 'MODERATELY_PLAYED',
+  HP: 'HEAVILY_PLAYED',
+  DMG: 'DAMAGED',
 };
 
-function getNMMarketPrice(raw: ScrydexRawPrices): number | null {
-  return raw.NM?.market ?? null;
+function getNMPrice(card: PokemonCard): number | null {
+  const nm = card.prices?.tcgplayer?.['NEAR_MINT']?.avg
+    ?? card.prices?.ebay?.['NEAR_MINT']?.avg
+    ?? null;
+  return nm;
 }
 
 export function getPriceForCondition(
   card: PokemonCard,
   condition: CardCondition
 ): number | null {
-  const raw = card.prices?.raw;
-  if (!raw) return null;
+  const conditionKey = CONDITION_TO_POKETRACE[condition];
+  const prices = card.prices;
+  if (!prices) return null;
 
-  const scrydexCondition = CONDITION_TO_SCRYDEX[condition];
+  // Prefer TCGPlayer, fall back to eBay
+  const directPrice =
+    prices.tcgplayer?.[conditionKey]?.avg ??
+    prices.ebay?.[conditionKey]?.avg ??
+    null;
 
-  // Use direct per-condition market price if available
-  const directPrice = raw[scrydexCondition]?.market;
   if (directPrice != null) {
     return Math.round(directPrice * 100) / 100;
   }
 
-  // Fallback: apply multiplier to NM market price
-  const nmPrice = getNMMarketPrice(raw);
+  // Fallback: apply multiplier to NM price
+  const nmPrice = getNMPrice(card);
   if (nmPrice === null) return null;
 
   const multiplier = CONDITION_MULTIPLIERS[condition] ?? 1.0;
@@ -38,19 +44,43 @@ export function getPriceForCondition(
 }
 
 export function getBestPrice(card: PokemonCard): number | null {
-  const raw = card.prices?.raw;
-  if (!raw) return null;
-  return getNMMarketPrice(raw);
+  return getNMPrice(card);
 }
 
-export function getPriceTrend(card: PokemonCard, condition: CardCondition): number | null {
-  const raw = card.prices?.raw;
-  if (!raw) return null;
-  const scrydexCondition = CONDITION_TO_SCRYDEX[condition];
-  return raw[scrydexCondition]?.trends?.['7d'] ?? null;
+export function getPriceTrend(_card: PokemonCard, _condition: CardCondition): number | null {
+  // PokeTrace does not expose trend deltas in the base card response
+  return null;
 }
 
 export function getAffiliateTCGUrl(card: PokemonCard): string {
   const encodedName = encodeURIComponent(card.name);
   return `https://www.tcgplayer.com/search/pokemon/product?q=${encodedName}`;
+}
+
+/**
+ * Extract graded prices grouped by grader from a card's eBay price data.
+ * PokeTrace stores graded prices inline with keys like "PSA_10", "CGC_9", "BGS_9.5".
+ */
+export function getGradedPricesByGrader(
+  card: PokemonCard
+): Record<string, Array<{ grade: string; price: PokeTracePrice }>> {
+  const ebayPrices = card.prices?.ebay ?? {};
+  const result: Record<string, Array<{ grade: string; price: PokeTracePrice }>> = {};
+
+  for (const [key, price] of Object.entries(ebayPrices)) {
+    // Grade keys contain an underscore: PSA_10, CGC_9, BGS_9.5
+    if (!key.includes('_')) continue;
+    const underscoreIdx = key.indexOf('_');
+    const grader = key.slice(0, underscoreIdx).toUpperCase();
+    const grade = key.slice(underscoreIdx + 1);
+    if (!result[grader]) result[grader] = [];
+    result[grader].push({ grade, price });
+  }
+
+  // Sort each grader's grades descending
+  for (const grader of Object.keys(result)) {
+    result[grader].sort((a, b) => parseFloat(b.grade) - parseFloat(a.grade));
+  }
+
+  return result;
 }

@@ -8,9 +8,10 @@ interface PokeTraceCard {
   set: { slug: string; name: string };
   variant?: string;
   rarity?: string;
+  image?: string;
   market?: string;
   currency?: string;
-  prices?: Record<string, Record<string, { avg: number; low: number; high: number; saleCount?: number }>>;
+  prices?: Record<string, Record<string, { avg: number; low: number; high: number; saleCount?: number; avg1d?: number; avg7d?: number; avg30d?: number }>>;
   lastUpdated?: string;
 }
 
@@ -55,7 +56,7 @@ function toPokemonCard(raw: PokeTraceCard): PokemonCard {
       name: raw.set.name,
     },
     rarity: raw.rarity,
-    images: { small: '', large: '' },
+    images: { small: raw.image ?? '', large: raw.image ?? '' },
     prices,
   };
 }

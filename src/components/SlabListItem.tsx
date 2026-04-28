@@ -30,8 +30,8 @@ const SlabListItem: React.FC<SlabListItemProps> = ({ item, onRemove }) => {
   const badgeTextColor = GRADER_TEXT_COLORS[grader] ?? '#ffffff';
 
   const formattedPrice =
-    gradedPrice?.market != null
-      ? `$${gradedPrice.market.toFixed(2)}`
+    gradedPrice?.avg != null
+      ? `$${gradedPrice.avg.toFixed(2)}`
       : null;
 
   return (

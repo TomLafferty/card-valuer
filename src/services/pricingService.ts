@@ -47,9 +47,12 @@ export function getBestPrice(card: PokemonCard): number | null {
   return getNMPrice(card);
 }
 
-export function getPriceTrend(_card: PokemonCard, _condition: CardCondition): number | null {
-  // PokeTrace does not expose trend deltas in the base card response
-  return null;
+export function getPriceTrend(card: PokemonCard, condition: CardCondition): number | null {
+  const conditionKey = CONDITION_TO_POKETRACE[condition];
+  const entry = card.prices?.tcgplayer?.[conditionKey] ?? card.prices?.ebay?.[conditionKey];
+  if (!entry?.avg || !entry?.avg7d) return null;
+  // Positive = price risen vs 7-day average, negative = fallen
+  return Math.round((entry.avg - entry.avg7d) * 100) / 100;
 }
 
 export function getAffiliateTCGUrl(card: PokemonCard): string {

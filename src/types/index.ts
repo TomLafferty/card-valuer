@@ -13,6 +13,13 @@ export interface PokeTracePrice {
   low: number;
   high: number;
   saleCount?: number;
+  approxSaleCount?: boolean;
+  avg1d?: number;
+  avg7d?: number;
+  avg30d?: number;
+  median7d?: number;
+  median30d?: number;
+  lastUpdated?: string;
 }
 
 // prices.ebay / prices.tcgplayer / prices.cardmarket

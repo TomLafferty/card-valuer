@@ -141,7 +141,7 @@ const CollectionScreen: React.FC = () => {
             renderItem={({ item }) => (
               <View style={styles.topCardItem}>
                 <Image
-                  source={{ uri: item.card.images.small }}
+                  source={{ uri: item.card.images?.small ?? '' }}
                   style={styles.topCardImage}
                   contentFit="contain"
                   accessibilityLabel={`${item.card.name} card image`}
